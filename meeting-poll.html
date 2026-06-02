@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Find a Time — Meeting Poll</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1814;
+    --ink2: #4a4640;
+    --ink3: #8a8480;
+    --cream: #faf7f2;
+    --cream2: #f0ebe0;
+    --cream3: #e5ded0;
+    --sage: #5a7a5a;
+    --sage-light: #eaf2ea;
+    --gold: #c4913a;
+    --gold-light: #fdf4e3;
+    --red: #c0392b;
+    --red-light: #fdecea;
+    --border: #d8d0c0;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--ink);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  /* ── CONFIG BANNER ── */
+  #config-banner {
+    background: var(--gold-light);
+    border-bottom: 1px solid var(--gold);
+    padding: 10px 24px;
+    font-size: 13px;
+    color: var(--ink2);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  #config-banner a { color: var(--gold); font-weight: 500; }
+  .banner-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); flex-shrink: 0; }
+
+  /* ── LAYOUT ── */
+  .page { max-width: 900px; margin: 0 auto; padding: 48px 24px; }
+
+  header { margin-bottom: 40px; }
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 36px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+  header p { font-size: 15px; color: var(--ink3); font-weight: 300; }
+
+  /* ── CARD ── */
+  .card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow);
+  }
+  .card-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 500;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .step-badge {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--ink);
+    color: #fff;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  /* ── FORM ELEMENTS ── */
+  label { font-size: 13px; color: var(--ink2); font-weight: 500; display: block; margin-bottom: 5px; }
+  input[type="text"], input[type="number"], textarea, select {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--ink);
+    background: var(--cream);
+    outline: none;
+    transition: border-color 0.15s;
+    margin-bottom: 14px;
+  }
+  input:focus, textarea:focus, select:focus { border-color: var(--ink2); background: #fff; }
+  textarea { resize: vertical; min-height: 60px; }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+
+  /* ── BUTTONS ── */
+  .btn {
+    padding: 10px 20px; border-radius: 8px;
+    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
+    cursor: pointer; border: none; transition: all 0.15s;
+    display: inline-flex; align-items: center; gap: 7px;
+  }
+  .btn-primary { background: var(--ink); color: #fff; }
+  .btn-primary:hover { background: var(--ink2); }
+  .btn-primary:disabled { background: var(--ink3); cursor: not-allowed; }
+  .btn-secondary { background: var(--cream2); color: var(--ink); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--cream3); }
+  .btn-sage { background: var(--sage); color: #fff; }
+  .btn-sage:hover { background: #4a6a4a; }
+
+  /* ── CALENDAR GRID ── */
+  .cal-controls {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;
+  }
+  .cal-controls strong { font-family: 'Playfair Display', serif; font-size: 16px; flex: 1; }
+  #week-grid { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; min-width: 560px; }
+  th {
+    font-size: 12px; font-weight: 500; color: var(--ink3);
+    text-transform: uppercase; letter-spacing: 0.6px;
+    padding: 8px 4px; text-align: center;
+  }
+  .time-label {
+    font-size: 11px; color: var(--ink3); width: 48px;
+    padding: 0 6px 0 0; text-align: right; vertical-align: middle;
+    white-space: nowrap;
+  }
+  .time-cell {
+    border: 1px solid var(--cream3);
+    height: 28px; cursor: pointer;
+    transition: background 0.1s;
+    position: relative;
+    min-width: 60px;
+  }
+  .time-cell:hover { background: var(--cream2); }
+  .time-cell.busy { background: var(--red-light); cursor: not-allowed; }
+  .time-cell.busy:hover { background: #f5d5d2; }
+  .time-cell.selected { background: var(--sage-light); }
+  .time-cell.selected:hover { background: #d5e8d5; }
+  .time-cell.busy.selected { background: var(--red-light); }
+
+  /* ── LEGEND ── */
+  .legend {
+    display: flex; gap: 16px; font-size: 12px; color: var(--ink3);
+    margin-top: 10px; flex-wrap: wrap;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid rgba(0,0,0,0.1); }
+
+  /* ── SLOTS LIST ── */
+  .slot-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px; border-radius: 8px;
+    border: 1px solid var(--border); margin-bottom: 8px;
+    background: var(--cream);
+  }
+  .slot-item .slot-label { font-size: 14px; font-weight: 500; }
+  .slot-item .slot-sub { font-size: 12px; color: var(--ink3); margin-top: 1px; }
+  .slot-remove {
+    background: none; border: none; cursor: pointer;
+    color: var(--ink3); font-size: 18px; line-height: 1; padding: 0 4px;
+  }
+  .slot-remove:hover { color: var(--red); }
+
+  /* ── POLL LINK / SHARE ── */
+  #poll-output { display: none; }
+  .poll-link-box {
+    background: var(--cream2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px 16px;
+    font-size: 13px; word-break: break-all;
+    font-family: 'DM Mono', monospace;
+    color: var(--ink2);
+    margin-bottom: 14px;
+  }
+
+  /* ── POLL VOTING VIEW ── */
+  #vote-view { display: none; }
+  .vote-slot {
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; margin-bottom: 10px;
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; transition: all 0.15s; background: #fff;
+    user-select: none;
+  }
+  .vote-slot:hover { border-color: var(--sage); }
+  .vote-slot.voted { background: var(--sage-light); border-color: var(--sage); }
+  .vote-slot .vote-label { font-weight: 500; font-size: 15px; }
+  .vote-slot .vote-count {
+    font-size: 13px; color: var(--ink3);
+    display: flex; align-items: center; gap: 5px;
+  }
+  .vote-bar-wrap { height: 4px; background: var(--cream3); border-radius: 2px; margin-top: 6px; }
+  .vote-bar { height: 4px; background: var(--sage); border-radius: 2px; transition: width 0.4s; }
+
+  /* ── RESULTS ── */
+  #results-view { display: none; }
+  .winner-card {
+    background: var(--sage-light); border: 1px solid var(--sage);
+    border-radius: 10px; padding: 18px;
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 20px;
+  }
+  .winner-icon { font-size: 28px; }
+  .winner-label { font-family: 'Playfair Display', serif; font-size: 17px; }
+  .winner-sub { font-size: 13px; color: var(--sage); margin-top: 2px; }
+
+  /* ── AUTH STATUS ── */
+  .auth-status {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; padding: 5px 12px;
+    border-radius: 20px; border: 1px solid var(--border);
+    background: var(--cream2);
+  }
+  .auth-dot { width: 7px; height: 7px; border-radius: 50%; }
+  .auth-dot.connected { background: var(--sage); }
+  .auth-dot.disconnected { background: var(--ink3); }
+
+  /* ── MISC ── */
+  .divider { border: none; border-top: 1px solid var(--cream3); margin: 24px 0; }
+  .error-msg { color: var(--red); font-size: 13px; padding: 8px 0; }
+  .loading { color: var(--ink3); font-size: 13px; font-style: italic; }
+  #auth-section { margin-bottom: 6px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+
+<div id="config-banner">
+  <span class="banner-dot"></span>
+  <strong>Setup required:</strong> Add your Google OAuth Client ID below — see instructions at bottom of page.
+  &nbsp;|&nbsp; <a href="#setup-instructions">Jump to setup guide ↓</a>
+</div>
+
+<div class="page">
+  <header>
+    <h1>Find a Time</h1>
+    <p>Create a meeting poll, check your calendar for conflicts, and let invitees vote.</p>
+  </header>
+
+  <!-- ══════════ CREATOR VIEW ══════════ -->
+  <div id="creator-view">
+
+    <!-- Step 1: Meeting details -->
+    <div class="card">
+      <div class="card-title"><span class="step-badge">1</span> Meeting details</div>
+      <label>Meeting title</label>
+      <input type="text" id="meeting-title" placeholder="e.g. Faculty Governance Discussion" />
+      <label>Description (optional)</label>
+      <textarea id="meeting-desc" placeholder="Agenda, Zoom link, etc."></textarea>
+      <div class="form-row">
+        <div>
+          <label>Duration (minutes)</label>
+          <input type="number" id="duration" value="60" min="15" step="15" />
+        </div>
+        <div>
+          <label>Your name (poll creator)</label>
+          <input type="text" id="creator-name" placeholder="e.g. Louis" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Google Calendar -->
+    <div class="card">
+      <div class="card-title"><span class="step-badge">2</span> Connect Google Calendar</div>
+
+      <label>OAuth Client ID</label>
+      <input type="text" id="client-id-input" placeholder="paste your Client ID here (ends in .apps.googleusercontent.com)" />
+
+      <div id="auth-section">
+        <span class="auth-status" id="auth-status-badge">
+          <span class="auth-dot disconnected" id="auth-dot"></span>
+          Not connected
+        </span>
+        <button class="btn btn-secondary" id="sign-in-btn" onclick="signIn()">Connect Google Calendar</button>
+        <button class="btn btn-secondary" id="sign-out-btn" style="display:none" onclick="signOut()">Disconnect</button>
+      </div>
+      <p class="error-msg" id="auth-error"></p>
+
+      <div id="cal-section" style="display:none; margin-top:16px;">
+        <hr class="divider" style="margin:0 0 16px">
+        <div class="cal-controls">
+          <button class="btn btn-secondary" onclick="prevWeek()">← Prev</button>
+          <strong id="week-label"></strong>
+          <button class="btn btn-secondary" onclick="nextWeek()">Next →</button>
+          <button class="btn btn-secondary" onclick="loadCalendar()" id="refresh-btn">↻ Refresh</button>
+        </div>
+        <p style="font-size:13px;color:var(--ink3);margin-bottom:12px;">
+          Click cells to add them as candidate time slots. Shaded cells = you're busy.
+        </p>
+        <div id="week-grid"></div>
+        <div class="legend">
+          <span class="legend-item"><span class="legend-swatch" style="background:var(--red-light)"></span> Busy (conflict)</span>
+          <span class="legend-item"><span class="legend-swatch" style="background:var(--sage-light)"></span> Selected slot</span>
+          <span class="legend-item"><span class="legend-swatch" style="background:#fff"></span> Free</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Selected slots -->
+    <div class="card">
+      <div class="card-title"><span class="step-badge">3</span> Candidate time slots</div>
+      <p style="font-size:13px;color:var(--ink3);margin-bottom:14px;">
+        Select slots from the calendar above, or add manually below.
+      </p>
+      <div class="form-row">
+        <div>
+          <label>Date</label>
+          <input type="text" id="manual-date" placeholder="e.g. 2025-09-15" />
+        </div>
+        <div>
+          <label>Time (24h)</label>
+          <input type="text" id="manual-time" placeholder="e.g. 14:00" />
+        </div>
+      </div>
+      <button class="btn btn-secondary" onclick="addManualSlot()">+ Add slot</button>
+      <p class="error-msg" id="slot-error"></p>
+
+      <hr class="divider">
+      <div id="slots-list">
+        <p style="font-size:13px;color:var(--ink3);font-style:italic;">No slots yet.</p>
+      </div>
+    </div>
+
+    <!-- Step 4: Generate poll -->
+    <div class="card">
+      <div class="card-title"><span class="step-badge">4</span> Generate poll link</div>
+      <button class="btn btn-primary" onclick="generatePoll()">Generate shareable poll link</button>
+      <div id="poll-output" style="margin-top:18px;">
+        <p style="font-size:13px;color:var(--ink3);margin-bottom:8px;">Share this link with invitees:</p>
+        <div class="poll-link-box" id="poll-link-text"></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-secondary" onclick="copyPollLink()">Copy link</button>
+          <button class="btn btn-sage" onclick="openVoteView()">Preview voting page →</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end creator-view -->
+
+  <!-- ══════════ VOTE VIEW ══════════ -->
+  <div id="vote-view">
+    <div class="card">
+      <h2 style="font-family:'Playfair Display',serif;font-size:22px;margin-bottom:4px;" id="vote-title"></h2>
+      <p style="font-size:14px;color:var(--ink3);margin-bottom:20px;" id="vote-desc"></p>
+      <label>Your name</label>
+      <input type="text" id="voter-name" placeholder="Enter your name" style="max-width:300px;" />
+      <p style="font-size:13px;color:var(--ink3);margin-bottom:12px;">
+        Click all times that work for you — then submit.
+      </p>
+      <div id="vote-slots-list"></div>
+      <button class="btn btn-primary" style="margin-top:8px;" onclick="submitVote()">Submit availability</button>
+      <p class="error-msg" id="vote-error"></p>
+      <hr class="divider">
+      <button class="btn btn-secondary" onclick="backToCreator()">← Back to editor</button>
+    </div>
+
+    <div id="results-view" class="card">
+      <div class="card-title">Current results</div>
+      <div id="winner-section"></div>
+      <div id="results-list"></div>
+      <button class="btn btn-secondary" style="margin-top:10px;" onclick="exportResults()">Export results as text</button>
+    </div>
+  </div>
+
+  <!-- ══════════ SETUP INSTRUCTIONS ══════════ -->
+  <div id="setup-instructions" class="card" style="margin-top:48px;border-style:dashed;background:var(--cream);">
+    <div class="card-title" style="margin-bottom:14px;">
+      📋 Setup guide: getting your Google OAuth Client ID
+    </div>
+    <ol style="font-size:14px;line-height:2;color:var(--ink2);padding-left:18px;">
+      <li>Go to <a href="https://console.cloud.google.com" target="_blank" style="color:var(--gold);">console.cloud.google.com</a> and create a new project (or use an existing one).</li>
+      <li>In the left menu, go to <strong>APIs & Services → Library</strong>. Search for <em>Google Calendar API</em> and enable it.</li>
+      <li>Go to <strong>APIs & Services → OAuth consent screen</strong>. Set to <em>External</em>, fill in the app name (e.g. "My Meeting Poll"), save.</li>
+      <li>Go to <strong>APIs & Services → Credentials → Create Credentials → OAuth client ID</strong>.</li>
+      <li>Select <strong>Web application</strong>. Under <em>Authorized JavaScript origins</em>, add the exact URL where this file lives — e.g. <code>https://yourdomain.com</code> or <code>http://localhost:8080</code>.</li>
+      <li>Click Create. Copy the <strong>Client ID</strong> and paste it into the field in Step 2 above.</li>
+      <li>Back on the OAuth consent screen, add your own Google account as a <strong>Test user</strong> (under "Test users") so you can authenticate before publishing.</li>
+    </ol>
+    <p style="font-size:13px;color:var(--ink3);margin-top:12px;padding-top:12px;border-top:1px solid var(--cream3);">
+      <strong>To host this file:</strong> Upload <code>meeting-poll.html</code> to any static web host —
+      <a href="https://pages.github.com" target="_blank" style="color:var(--gold);">GitHub Pages</a> (free),
+      <a href="https://www.netlify.com" target="_blank" style="color:var(--gold);">Netlify</a> (free), or simply open it locally with
+      <code>python3 -m http.server 8080</code> and visit <code>http://localhost:8080/meeting-poll.html</code>.
+      The file must be served over HTTP (not opened as file://) for Google OAuth to work.
+    </p>
+  </div>
+
+</div><!-- end page -->
+
+<!-- Google Identity Services -->
+<script src="https://accounts.google.com/gsi/client" async></script>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+let gapiLoaded = false;
+let tokenClient = null;
+let accessToken = null;
+let selectedSlots = []; // [{iso, label}]
+let busyTimes = [];     // [{start, end}]
+let currentWeekStart = getMonday(new Date());
+let currentPollData = null;
+let votes = {};         // slotIso -> [voterName, ...]
+let currentVoterVotes = new Set();
+
+// ═══════════════════════════════════════════════════════
+// GOOGLE AUTH
+// ═══════════════════════════════════════════════════════
+function getClientId() {
+  return document.getElementById('client-id-input').value.trim();
+}
+
+function signIn() {
+  const cid = getClientId();
+  if (!cid) {
+    document.getElementById('auth-error').textContent = 'Please paste your OAuth Client ID first.';
+    return;
+  }
+  document.getElementById('auth-error').textContent = '';
+
+  if (!tokenClient) {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: cid,
+      scope: 'https://www.googleapis.com/auth/calendar.readonly',
+      callback: (resp) => {
+        if (resp.error) {
+          document.getElementById('auth-error').textContent = 'Auth error: ' + resp.error;
+          return;
+        }
+        accessToken = resp.access_token;
+        setAuthConnected(true);
+        loadCalendar();
+      }
+    });
+  }
+  tokenClient.requestAccessToken({ prompt: 'consent' });
+}
+
+function signOut() {
+  if (accessToken) {
+    google.accounts.oauth2.revoke(accessToken, () => {});
+    accessToken = null;
+  }
+  tokenClient = null;
+  setAuthConnected(false);
+}
+
+function setAuthConnected(on) {
+  document.getElementById('auth-dot').className = 'auth-dot ' + (on ? 'connected' : 'disconnected');
+  document.getElementById('auth-status-badge').querySelector('span:last-child') || null;
+  const badge = document.getElementById('auth-status-badge');
+  badge.lastChild.textContent = on ? 'Connected' : 'Not connected';
+  document.getElementById('sign-in-btn').style.display = on ? 'none' : '';
+  document.getElementById('sign-out-btn').style.display = on ? '' : 'none';
+  document.getElementById('cal-section').style.display = on ? '' : 'none';
+}
+
+// ═══════════════════════════════════════════════════════
+// CALENDAR FETCH & RENDER
+// ═══════════════════════════════════════════════════════
+function getMonday(d) {
+  const dt = new Date(d);
+  const day = dt.getDay();
+  const diff = dt.getDate() - day + (day === 0 ? -6 : 1);
+  dt.setDate(diff);
+  dt.setHours(0,0,0,0);
+  return dt;
+}
+
+function addDays(d, n) {
+  const dt = new Date(d); dt.setDate(dt.getDate() + n); return dt;
+}
+
+function prevWeek() { currentWeekStart = addDays(currentWeekStart, -7); loadCalendar(); }
+function nextWeek() { currentWeekStart = addDays(currentWeekStart, 7); loadCalendar(); }
+
+async function loadCalendar() {
+  if (!accessToken) return;
+  const btn = document.getElementById('refresh-btn');
+  btn.textContent = 'Loading…';
+  btn.disabled = true;
+
+  const start = new Date(currentWeekStart);
+  const end = addDays(start, 7);
+
+  const url = new URL('https://www.googleapis.com/calendar/v3/freeBusy');
+  const body = {
+    timeMin: start.toISOString(),
+    timeMax: end.toISOString(),
+    items: [{ id: 'primary' }]
+  };
+
+  try {
+    const resp = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + accessToken,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error.message);
+    busyTimes = (data.calendars?.primary?.busy || []).map(b => ({
+      start: new Date(b.start),
+      end: new Date(b.end)
+    }));
+    renderWeekGrid();
+  } catch(e) {
+    document.getElementById('auth-error').textContent = 'Calendar error: ' + e.message;
+  }
+
+  btn.textContent = '↻ Refresh';
+  btn.disabled = false;
+}
+
+function isBusy(dt, durationMin) {
+  const end = new Date(dt.getTime() + durationMin * 60000);
+  return busyTimes.some(b => dt < b.end && end > b.start);
+}
+
+function isSelected(dt) {
+  return selectedSlots.some(s => s.iso === dt.toISOString());
+}
+
+function renderWeekGrid() {
+  const duration = parseInt(document.getElementById('duration').value) || 60;
+  const days = [];
+  for (let i = 0; i < 7; i++) days.push(addDays(currentWeekStart, i));
+
+  const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  // Update week label
+  const wEnd = addDays(currentWeekStart, 6);
+  document.getElementById('week-label').textContent =
+    months[currentWeekStart.getMonth()] + ' ' + currentWeekStart.getDate() +
+    ' – ' + months[wEnd.getMonth()] + ' ' + wEnd.getDate() + ', ' + wEnd.getFullYear();
+
+  // Build table: 8am–9pm in 30m slots
+  const HOUR_START = 8, HOUR_END = 21, SLOT_MIN = 30;
+  const slots = [];
+  for (let h = HOUR_START; h < HOUR_END; h++) {
+    for (let m = 0; m < 60; m += SLOT_MIN) slots.push({ h, m });
+  }
+
+  let html = '<table><thead><tr><th></th>';
+  days.forEach((d, i) => {
+    html += `<th>${dayNames[i]}<br><span style="font-size:11px;font-weight:400;">${d.getDate()}</span></th>`;
+  });
+  html += '</tr></thead><tbody>';
+
+  slots.forEach(({ h, m }) => {
+    const timeStr = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+    const label = m === 0 ? (h > 12 ? (h-12)+'pm' : h+'am') : '';
+    html += `<tr><td class="time-label">${label}</td>`;
+    days.forEach(d => {
+      const dt = new Date(d);
+      dt.setHours(h, m, 0, 0);
+      const busy = isBusy(dt, duration);
+      const sel = isSelected(dt);
+      const cls = ['time-cell', busy ? 'busy' : '', sel ? 'selected' : ''].filter(Boolean).join(' ');
+      html += `<td class="${cls}" data-iso="${dt.toISOString()}" data-busy="${busy}" onclick="toggleSlot(this)"></td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('week-grid').innerHTML = html;
+}
+
+function toggleSlot(cell) {
+  const iso = cell.dataset.iso;
+  const busy = cell.dataset.busy === 'true';
+  if (busy) return; // don't allow booking busy slots
+  const dt = new Date(iso);
+  const duration = parseInt(document.getElementById('duration').value) || 60;
+
+  const idx = selectedSlots.findIndex(s => s.iso === iso);
+  if (idx >= 0) {
+    selectedSlots.splice(idx, 1);
+    cell.classList.remove('selected');
+  } else {
+    const label = formatSlotLabel(dt, duration);
+    selectedSlots.push({ iso, label });
+    cell.classList.add('selected');
+  }
+  renderSlotsList();
+}
+
+function formatSlotLabel(dt, duration) {
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const end = new Date(dt.getTime() + (duration||60)*60000);
+  const fmt = (d) => {
+    const h = d.getHours(), m = d.getMinutes();
+    const ampm = h >= 12 ? 'pm' : 'am';
+    const hh = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+    return hh + (m ? ':' + String(m).padStart(2,'0') : '') + ampm;
+  };
+  return `${days[dt.getDay()]}, ${months[dt.getMonth()]} ${dt.getDate()} · ${fmt(dt)} – ${fmt(end)}`;
+}
+
+// ═══════════════════════════════════════════════════════
+// MANUAL SLOT ADD
+// ═══════════════════════════════════════════════════════
+function addManualSlot() {
+  const dateStr = document.getElementById('manual-date').value.trim();
+  const timeStr = document.getElementById('manual-time').value.trim();
+  const errEl = document.getElementById('slot-error');
+  errEl.textContent = '';
+  if (!dateStr || !timeStr) { errEl.textContent = 'Please fill in date and time.'; return; }
+  const dt = new Date(dateStr + 'T' + timeStr + ':00');
+  if (isNaN(dt.getTime())) { errEl.textContent = 'Invalid date or time format.'; return; }
+  const duration = parseInt(document.getElementById('duration').value) || 60;
+  const iso = dt.toISOString();
+  if (selectedSlots.find(s => s.iso === iso)) { errEl.textContent = 'Slot already added.'; return; }
+  selectedSlots.push({ iso, label: formatSlotLabel(dt, duration) });
+  renderSlotsList();
+  if (accessToken) renderWeekGrid();
+  document.getElementById('manual-date').value = '';
+  document.getElementById('manual-time').value = '';
+}
+
+function removeSlot(iso) {
+  selectedSlots = selectedSlots.filter(s => s.iso !== iso);
+  renderSlotsList();
+  if (accessToken) renderWeekGrid();
+}
+
+function renderSlotsList() {
+  const el = document.getElementById('slots-list');
+  if (!selectedSlots.length) {
+    el.innerHTML = '<p style="font-size:13px;color:var(--ink3);font-style:italic;">No slots yet.</p>';
+    return;
+  }
+  const sorted = [...selectedSlots].sort((a,b) => new Date(a.iso) - new Date(b.iso));
+  el.innerHTML = sorted.map(s => `
+    <div class="slot-item">
+      <div>
+        <div class="slot-label">${s.label}</div>
+      </div>
+      <button class="slot-remove" onclick="removeSlot('${s.iso}')" title="Remove">×</button>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// POLL GENERATION
+// ═══════════════════════════════════════════════════════
+function generatePoll() {
+  const title = document.getElementById('meeting-title').value.trim();
+  const desc = document.getElementById('meeting-desc').value.trim();
+  const duration = parseInt(document.getElementById('duration').value) || 60;
+  const creator = document.getElementById('creator-name').value.trim();
+  const errEl = document.getElementById('slot-error');
+
+  if (!title) { errEl.textContent = 'Please add a meeting title.'; errEl.scrollIntoView({behavior:'smooth'}); return; }
+  if (!selectedSlots.length) { errEl.textContent = 'Please add at least one time slot.'; return; }
+  errEl.textContent = '';
+
+  currentPollData = { title, desc, duration, creator, slots: [...selectedSlots] };
+  votes = {};
+  selectedSlots.forEach(s => { votes[s.iso] = []; });
+
+  // Encode as URL hash (no server required — poll state lives in the URL)
+  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(currentPollData))));
+  const url = location.href.split('#')[0] + '#poll=' + encoded;
+
+  document.getElementById('poll-link-text').textContent = url;
+  document.getElementById('poll-output').style.display = '';
+  document.getElementById('poll-output').scrollIntoView({ behavior: 'smooth' });
+}
+
+function copyPollLink() {
+  const text = document.getElementById('poll-link-text').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy link', 1500);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// VOTE VIEW
+// ═══════════════════════════════════════════════════════
+function openVoteView() {
+  if (!currentPollData) return;
+  renderVoteView(currentPollData);
+}
+
+function renderVoteView(poll) {
+  document.getElementById('creator-view').style.display = 'none';
+  document.getElementById('vote-view').style.display = '';
+
+  document.getElementById('vote-title').textContent = poll.title;
+  document.getElementById('vote-desc').textContent =
+    (poll.desc ? poll.desc + '\n' : '') +
+    `Duration: ${poll.duration} min` + (poll.creator ? ` · Created by ${poll.creator}` : '');
+
+  currentVoterVotes = new Set();
+  renderVoteSlots(poll);
+  renderResults(poll);
+}
+
+function renderVoteSlots(poll) {
+  const el = document.getElementById('vote-slots-list');
+  const sorted = [...poll.slots].sort((a,b) => new Date(a.iso) - new Date(b.iso));
+  el.innerHTML = sorted.map(s => `
+    <div class="vote-slot" data-iso="${s.iso}" onclick="toggleVote(this)">
+      <div>
+        <div class="vote-label">${s.label}</div>
+        <div class="vote-bar-wrap"><div class="vote-bar" id="bar-${s.iso.replace(/[:.]/g,'_')}" style="width:0%"></div></div>
+      </div>
+      <div class="vote-count" id="cnt-${s.iso.replace(/[:.]/g,'_')}">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        0
+      </div>
+    </div>
+  `).join('');
+  updateVoteBars(poll);
+}
+
+function toggleVote(el) {
+  const iso = el.dataset.iso;
+  if (currentVoterVotes.has(iso)) {
+    currentVoterVotes.delete(iso);
+    el.classList.remove('voted');
+  } else {
+    currentVoterVotes.add(iso);
+    el.classList.add('voted');
+  }
+}
+
+function submitVote() {
+  const name = document.getElementById('voter-name').value.trim();
+  const errEl = document.getElementById('vote-error');
+  if (!name) { errEl.textContent = 'Please enter your name.'; return; }
+  errEl.textContent = '';
+
+  // Record votes (in-memory; in a real app you'd POST to a server)
+  currentVoterVotes.forEach(iso => {
+    if (!votes[iso]) votes[iso] = [];
+    if (!votes[iso].includes(name)) votes[iso].push(name);
+  });
+
+  document.getElementById('voter-name').value = '';
+  currentVoterVotes = new Set();
+  document.querySelectorAll('.vote-slot').forEach(el => el.classList.remove('voted'));
+
+  renderResults(currentPollData);
+  document.getElementById('results-view').style.display = '';
+  document.getElementById('results-view').scrollIntoView({ behavior: 'smooth' });
+}
+
+function updateVoteBars(poll) {
+  const maxVotes = Math.max(1, ...poll.slots.map(s => (votes[s.iso]||[]).length));
+  poll.slots.forEach(s => {
+    const count = (votes[s.iso]||[]).length;
+    const key = s.iso.replace(/[:.]/g,'_');
+    const bar = document.getElementById('bar-' + key);
+    const cnt = document.getElementById('cnt-' + key);
+    if (bar) bar.style.width = Math.round(count / maxVotes * 100) + '%';
+    if (cnt) cnt.lastChild.textContent = ' ' + count;
+  });
+}
+
+function renderResults(poll) {
+  document.getElementById('results-view').style.display = '';
+  updateVoteBars(poll);
+
+  const sorted = [...poll.slots].sort((a,b) => (votes[b.iso]||[]).length - (votes[a.iso]||[]).length);
+  const winner = sorted[0];
+  const winnerCount = (votes[winner.iso]||[]).length;
+
+  const winnerEl = document.getElementById('winner-section');
+  if (winnerCount === 0) {
+    winnerEl.innerHTML = '<p style="font-size:13px;color:var(--ink3);font-style:italic;">No votes yet. Share the link with your colleagues!</p>';
+  } else {
+    winnerEl.innerHTML = `
+      <div class="winner-card">
+        <div class="winner-icon">🏆</div>
+        <div>
+          <div class="winner-label">${winner.label}</div>
+          <div class="winner-sub">${winnerCount} vote${winnerCount !== 1 ? 's' : ''} — leading option</div>
+        </div>
+      </div>`;
+  }
+
+  const listEl = document.getElementById('results-list');
+  listEl.innerHTML = sorted.map(s => {
+    const count = (votes[s.iso]||[]).length;
+    const voters = (votes[s.iso]||[]).join(', ');
+    const pct = winnerCount ? Math.round(count/winnerCount*100) : 0;
+    return `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--cream3);">
+        <div>
+          <div style="font-size:14px;font-weight:500;">${s.label}</div>
+          ${voters ? `<div style="font-size:12px;color:var(--ink3);margin-top:2px;">${voters}</div>` : ''}
+        </div>
+        <div style="font-size:15px;font-weight:500;color:${count===winnerCount&&count>0?'var(--sage)':'var(--ink3)'};">` + count + `</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function exportResults() {
+  if (!currentPollData) return;
+  const sorted = [...currentPollData.slots].sort((a,b) => (votes[b.iso]||[]).length - (votes[a.iso]||[]).length);
+  let out = `Meeting Poll: ${currentPollData.title}\n`;
+  out += `Duration: ${currentPollData.duration} min\n\n`;
+  out += `Results:\n`;
+  sorted.forEach(s => {
+    const count = (votes[s.iso]||[]).length;
+    const voters = (votes[s.iso]||[]).join(', ');
+    out += `  ${s.label} — ${count} vote${count!==1?'s':''} (${voters||'none'})\n`;
+  });
+  const blob = new Blob([out], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'poll-results.txt';
+  a.click();
+}
+
+function backToCreator() {
+  document.getElementById('vote-view').style.display = 'none';
+  document.getElementById('creator-view').style.display = '';
+}
+
+// ═══════════════════════════════════════════════════════
+// URL HASH — load poll on page load
+// ═══════════════════════════════════════════════════════
+function checkHash() {
+  const hash = location.hash;
+  if (!hash.startsWith('#poll=')) return;
+  try {
+    const encoded = hash.slice(6);
+    const json = decodeURIComponent(escape(atob(encoded)));
+    const poll = JSON.parse(json);
+    currentPollData = poll;
+    votes = {};
+    poll.slots.forEach(s => { votes[s.iso] = []; });
+    renderVoteView(poll);
+  } catch(e) {
+    console.warn('Could not parse poll from URL:', e);
+  }
+}
+
+window.addEventListener('load', checkHash);
+
+// Init auth status badge text node
+document.addEventListener('DOMContentLoaded', () => {
+  const badge = document.getElementById('auth-status-badge');
+  badge.appendChild(document.createTextNode('Not connected'));
+});
+</script>
+</body>
+</html>
