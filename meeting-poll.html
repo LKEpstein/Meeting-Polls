@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Find a Time — Meeting Poll</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1814;
+    --ink2: #4a4640;
+    --ink3: #8a8480;
+    --cream: #faf7f2;
+    --cream2: #f0ebe0;
+    --cream3: #e5ded0;
+    --sage: #5a7a5a;
+    --sage-light: #eaf2ea;
+    --gold: #c4913a;
+    --gold-light: #fdf4e3;
+    --red: #c0392b;
+    --red-light: #fdecea;
+    --blue: #2a5fa5;
+    --blue-light: #e8f0fb;
+    --border: #d8d0c0;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--ink); min-height: 100vh; line-height: 1.6; }
+
+  #config-banner {
+    background: var(--gold-light); border-bottom: 1px solid var(--gold);
+    padding: 10px 24px; font-size: 13px; color: var(--ink2);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  #config-banner a { color: var(--gold); font-weight: 500; }
+  .banner-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); flex-shrink: 0; }
+
+  .page { max-width: 900px; margin: 0 auto; padding: 48px 24px; }
+  header { margin-bottom: 40px; }
+  header h1 { font-family: 'Playfair Display', serif; font-size: 36px; font-weight: 600; letter-spacing: -0.5px; margin-bottom: 6px; }
+  header p { font-size: 15px; color: var(--ink3); font-weight: 300; }
+
+  .card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 28px; margin-bottom: 24px; box-shadow: var(--shadow); }
+  .card-title { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 500; margin-bottom: 18px; display: flex; align-items: center; gap: 10px; }
+  .step-badge { width: 24px; height: 24px; border-radius: 50%; background: var(--ink); color: #fff; font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 500; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+  label { font-size: 13px; color: var(--ink2); font-weight: 500; display: block; margin-bottom: 5px; }
+  input[type="text"], input[type="number"], textarea, select {
+    width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px;
+    font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--ink);
+    background: var(--cream); outline: none; transition: border-color 0.15s; margin-bottom: 14px;
+  }
+  input:focus, textarea:focus, select:focus { border-color: var(--ink2); background: #fff; }
+  textarea { resize: vertical; min-height: 60px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+
+  .btn { padding: 10px 20px; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; display: inline-flex; align-items: center; gap: 7px; }
+  .btn-primary { background: var(--ink); color: #fff; }
+  .btn-primary:hover { background: var(--ink2); }
+  .btn-primary:disabled { background: var(--ink3); cursor: not-allowed; }
+  .btn-secondary { background: var(--cream2); color: var(--ink); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--cream3); }
+  .btn-sage { background: var(--sage); color: #fff; }
+  .btn-sage:hover { background: #4a6a4a; }
+  .btn-blue { background: var(--blue); color: #fff; }
+  .btn-blue:hover { background: #1e4a8a; }
+
+  /* Sheets status */
+  .sheets-status { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--cream2); }
+  .sheets-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink3); }
+  .sheets-dot.ok { background: var(--sage); }
+  .sheets-dot.err { background: var(--red); }
+
+  /* Calendar */
+  .cal-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .cal-controls strong { font-family: 'Playfair Display', serif; font-size: 16px; flex: 1; }
+  #week-grid { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; min-width: 560px; }
+  th { font-size: 12px; font-weight: 500; color: var(--ink3); text-transform: uppercase; letter-spacing: 0.6px; padding: 8px 4px; text-align: center; }
+  .time-label { font-size: 11px; color: var(--ink3); width: 48px; padding: 0 6px 0 0; text-align: right; vertical-align: middle; white-space: nowrap; }
+  .time-cell { border: 1px solid var(--cream3); height: 28px; cursor: pointer; transition: background 0.1s; position: relative; min-width: 60px; }
+  .time-cell:hover { background: var(--cream2); }
+  .time-cell.busy { background: var(--red-light); cursor: not-allowed; }
+  .time-cell.busy:hover { background: #f5d5d2; }
+  .time-cell.selected { background: var(--sage-light); }
+  .time-cell.selected:hover { background: #d5e8d5; }
+  .time-cell.busy.selected { background: var(--red-light); }
+
+  .legend { display: flex; gap: 16px; font-size: 12px; color: var(--ink3); margin-top: 10px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid rgba(0,0,0,0.1); }
+
+  .slot-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 8px; background: var(--cream); }
+  .slot-item .slot-label { font-size: 14px; font-weight: 500; }
+  .slot-remove { background: none; border: none; cursor: pointer; color: var(--ink3); font-size: 18px; line-height: 1; padding: 0 4px; }
+  .slot-remove:hover { color: var(--red); }
+
+  #poll-output { display: none; }
+  .poll-link-box { background: var(--cream2); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; font-size: 13px; word-break: break-all; font-family: monospace; color: var(--ink2); margin-bottom: 14px; }
+
+  #vote-view { display: none; }
+  .vote-slot { border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.15s; background: #fff; user-select: none; }
+  .vote-slot:hover { border-color: var(--sage); }
+  .vote-slot.voted { background: var(--sage-light); border-color: var(--sage); }
+  .vote-slot .vote-label { font-weight: 500; font-size: 15px; }
+  .vote-slot .vote-count { font-size: 13px; color: var(--ink3); display: flex; align-items: center; gap: 5px; }
+  .vote-bar-wrap { height: 4px; background: var(--cream3); border-radius: 2px; margin-top: 6px; }
+  .vote-bar { height: 4px; background: var(--sage); border-radius: 2px; transition: width 0.4s; }
+
+  #results-view { display: none; }
+  .winner-card { background: var(--sage-light); border: 1px solid var(--sage); border-radius: 10px; padding: 18px; display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .winner-icon { font-size: 28px; }
+  .winner-label { font-family: 'Playfair Display', serif; font-size: 17px; }
+  .winner-sub { font-size: 13px; color: var(--sage); margin-top: 2px; }
+
+  .auth-status { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--cream2); }
+  .auth-dot { width: 7px; height: 7px; border-radius: 50%; }
+  .auth-dot.connected { background: var(--sage); }
+  .auth-dot.disconnected { background: var(--ink3); }
+
+  .divider { border: none; border-top: 1px solid var(--cream3); margin: 24px 0; }
+  .error-msg { color: var(--red); font-size: 13px; padding: 8px 0; }
+  .info-msg { color: var(--blue); font-size: 13px; padding: 8px 0; }
+  .loading { color: var(--ink3); font-size: 13px; font-style: italic; }
+  #auth-section { margin-bottom: 6px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+  /* Sheets config block */
+  .sheets-config { background: var(--blue-light); border: 1px solid #b0c8ef; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+  .sheets-config label { color: var(--blue); }
+  .sheets-config input { background: #fff; margin-bottom: 8px; }
+  .sheets-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+
+  /* Spinner */
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; }
+  .spinner.dark { border-color: rgba(0,0,0,0.15); border-top-color: var(--ink2); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div id="config-banner" style="display:none"></div>
+
+<div class="page">
+  <header>
+    <h1>Find a Time</h1>
+    <p>Create a meeting poll, check your calendar for conflicts, and let invitees vote — results saved to Google Sheets.</p>
+  </header>
+
+  <!-- ══════════ CREATOR VIEW ══════════ -->
+  <div id="creator-view">
+
+    <!-- Step 1: Meeting details -->
+    <div class="card">
+      <div class="card-title"><span class="step-badge">1</span> Meeting details</div>
+      <label>Meeting title</label>
+      <input type="text" id="meeting-title" placeholder="e.g. Faculty Governance Discussion" />
+      <label>Description (optional)</label>
+      <textarea id="meeting-desc" placeholder="Agenda, Zoom link, etc."></textarea>
+      <div class="form-row">
+        <div>
+          <label>Duration (minutes)</label>
+          <input type="number" id="duration" value="60" min="15" step="15" />
+        </div>
+        <div>
+          <label>Your name (poll creator)</label>
+          <input type="text" id="creator-name" placeholder="e.g. Louis" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Google Calendar -->
+    <div class="card">
+      <div class="card-title"><span class="step-badge">2</span> Connect Google Calendar</div>
+      <label>OAuth Client ID</label>
+      <input type="text" id="client-id-input" value="600131828787-ih1ahdes0csu87jvucmb9smkmp4uq7vf.apps.googleusercontent.com" />
+      <div id="auth-section">
+        <span class="auth-status" id="auth-status-badge">
+          <span class="auth-dot disconnected" id="auth-dot"></span>
+          <span id="auth-label">Not connected</span>
+        </span>
+        <button class="btn btn-secondary" id="sign-in-btn" onclick="signIn()">Connect Google Calendar</button>
+        <button class="btn btn-secondary" id="sign-out-btn" style="display:none" onclick="signOut()">Disconnect</button>
+      </div>
+      <p class="error-msg" id="auth-error"></p>
+
+      <div id="cal-section" style="display:none; margin-top:16px;">
+        <hr class="divider" style="margin:0 0 16px">
+        <div class="cal-controls">
+          <button class="btn btn-secondary" onclick="prevWeek()">← Prev</button>
+          <strong id="week-label"></strong>
+          <button class="btn btn-secondary" onclick="nextWeek()">Next →</button>
+          <button class="btn btn-secondary" onclick="loadCalendar()" id="refresh-btn">↻ Refresh</button>
+        </div>
+        <p style="font-size:13px;color:var(--ink3);margin-bottom:12px;">Click free cells to add candidate time slots. Shaded = you're busy.</p>
+        <div id="week-grid"></div>
+        <div class="legend">
+          <span class="legend-item"><span class="legend-swatch" style="background:var(--red-light)"></span> Busy (conflict)</span>
+          <span class="legend-item"><span class="legend-swatch" style="background:var(--sage-light)"></span> Selected slot</span>
+          <span class="legend-item"><span class="legend-swatch" style="background:#fff"></span> Free</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Selected slots -->
+    <div class="card">
+      <div class="card-title"><span class="step-badge">3</span> Candidate time slots</div>
+      <p style="font-size:13px;color:var(--ink3);margin-bottom:14px;">Select from the calendar above, or add manually below.</p>
+      <div class="form-row">
+        <div><label>Date (YYYY-MM-DD)</label><input type="text" id="manual-date" placeholder="e.g. 2025-09-15" /></div>
+        <div><label>Time (HH:MM, 24h)</label><input type="text" id="manual-time" placeholder="e.g. 14:00" /></div>
+      </div>
+      <button class="btn btn-secondary" onclick="addManualSlot()">+ Add slot</button>
+      <p class="error-msg" id="slot-error"></p>
+      <hr class="divider">
+      <div id="slots-list"><p style="font-size:13px;color:var(--ink3);font-style:italic;">No slots yet.</p></div>
+    </div>
+
+    <!-- Step 4: Google Sheets backend -->
+    <div class="card">
+      <div class="card-title"><span class="step-badge">4</span> Connect Google Sheets (persistent votes)</div>
+      <div class="sheets-config">
+        <label>Apps Script Web App URL</label>
+        <input type="text" id="script-url-input" placeholder="https://script.google.com/macros/s/YOUR_ID/exec" />
+        <div class="sheets-row">
+          <span class="sheets-status" id="sheets-status">
+            <span class="sheets-dot" id="sheets-dot"></span>
+            <span id="sheets-label">Not configured</span>
+          </span>
+          <button class="btn btn-blue" onclick="testScriptConnection()">Test connection</button>
+        </div>
+        <p class="error-msg" id="sheets-error"></p>
+        <p class="info-msg" id="sheets-info"></p>
+      </div>
+      <p style="font-size:13px;color:var(--ink3);">
+        Don't have a Script URL yet? <a href="#setup-instructions" style="color:var(--gold);">See setup guide ↓</a> — takes about 5 minutes.
+        Votes will still work in-memory if you skip this step.
+      </p>
+    </div>
+
+    <!-- Step 5: Generate poll -->
+    <div class="card">
+      <div class="card-title"><span class="step-badge">5</span> Generate poll link</div>
+      <button class="btn btn-primary" onclick="generatePoll()">Generate shareable poll link</button>
+      <div id="poll-output" style="margin-top:18px;">
+        <p style="font-size:13px;color:var(--ink3);margin-bottom:8px;">Share this link with invitees:</p>
+        <div class="poll-link-box" id="poll-link-text"></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-secondary" onclick="copyPollLink()">Copy link</button>
+          <button class="btn btn-sage" onclick="openVoteView()">Preview voting page →</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end creator-view -->
+
+  <!-- ══════════ VOTE VIEW ══════════ -->
+  <div id="vote-view">
+    <div class="card">
+      <h2 style="font-family:'Playfair Display',serif;font-size:22px;margin-bottom:4px;" id="vote-title"></h2>
+      <p style="font-size:14px;color:var(--ink3);margin-bottom:20px;white-space:pre-line;" id="vote-desc"></p>
+
+      <label>Your name</label>
+      <input type="text" id="voter-name" placeholder="Enter your name" style="max-width:300px;" />
+      <p style="font-size:13px;color:var(--ink3);margin-bottom:12px;">Click all times that work for you, then submit.</p>
+      <div id="vote-slots-list"></div>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="submitVote()" id="submit-vote-btn">Submit availability</button>
+        <span id="submit-spinner" style="display:none;"><span class="spinner dark"></span></span>
+      </div>
+      <p class="error-msg" id="vote-error"></p>
+      <p class="info-msg" id="vote-info"></p>
+      <hr class="divider">
+      <button class="btn btn-secondary" onclick="backToCreator()">← Back to editor</button>
+    </div>
+
+    <div id="results-view" class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
+        <div class="card-title" style="margin-bottom:0;">Current results</div>
+        <button class="btn btn-secondary" onclick="refreshResults()" id="refresh-results-btn">↻ Refresh results</button>
+      </div>
+      <div id="winner-section"></div>
+      <div id="results-list"></div>
+      <button class="btn btn-secondary" style="margin-top:10px;" onclick="exportResults()">Export as text</button>
+    </div>
+  </div>
+
+  <!-- ══════════ SETUP INSTRUCTIONS ══════════ -->
+  <div id="setup-instructions" class="card" style="margin-top:48px;border-style:dashed;background:var(--cream);">
+    <div class="card-title" style="margin-bottom:14px;">📋 Full setup guide</div>
+
+    <p style="font-weight:500;font-size:15px;margin-bottom:10px;">Part A — Google OAuth Client ID (for Calendar access)</p>
+    <ol style="font-size:14px;line-height:2.2;color:var(--ink2);padding-left:18px;margin-bottom:24px;">
+      <li>Go to <a href="https://console.cloud.google.com" target="_blank" style="color:var(--gold);">console.cloud.google.com</a> → create a new project.</li>
+      <li><strong>APIs &amp; Services → Library</strong> → search "Google Calendar API" → Enable.</li>
+      <li><strong>APIs &amp; Services → OAuth consent screen</strong> → External → fill app name → Save.</li>
+      <li>Add your Google account as a <strong>Test user</strong> on that same screen.</li>
+      <li><strong>Credentials → Create Credentials → OAuth client ID → Web application.</strong></li>
+      <li>Under <em>Authorized JavaScript origins</em>, add your hosting URL (e.g. <code>https://yourusername.github.io</code>) and <code>http://localhost:8080</code> for local testing.</li>
+      <li>Copy the Client ID and paste it into Step 2 above.</li>
+    </ol>
+
+    <p style="font-weight:500;font-size:15px;margin-bottom:10px;">Part B — Google Apps Script backend (for persistent votes)</p>
+    <ol style="font-size:14px;line-height:2.2;color:var(--ink2);padding-left:18px;margin-bottom:24px;">
+      <li>Go to <a href="https://script.google.com" target="_blank" style="color:var(--gold);">script.google.com</a> → click <strong>New project</strong>.</li>
+      <li>Delete the placeholder code and paste the entire contents of <code>apps-script.js</code> (provided alongside this file).</li>
+      <li>Click <strong>Deploy → New deployment → Web app</strong>.</li>
+      <li>Set <em>Execute as</em>: <strong>Me</strong>. Set <em>Who has access</em>: <strong>Anyone</strong>. Click Deploy.</li>
+      <li>Authorize the permissions it requests (it will ask to access Google Sheets — that's expected).</li>
+      <li>Copy the <strong>Web app URL</strong> and paste it into Step 4 above, then click "Test connection."</li>
+      <li>A Google Sheet named <strong>MeetingPollVotes</strong> will be created automatically in your Drive on first use.</li>
+    </ol>
+
+    <p style="font-weight:500;font-size:15px;margin-bottom:10px;">Part C — Hosting the HTML file</p>
+    <ol style="font-size:14px;line-height:2.2;color:var(--ink2);padding-left:18px;">
+      <li><strong>GitHub Pages (recommended):</strong> Upload <code>meeting-poll.html</code> to a public repo → Settings → Pages → Deploy from main branch. URL: <code>https://yourusername.github.io/reponame/meeting-poll.html</code></li>
+      <li><strong>Local testing:</strong> In Terminal, <code>cd</code> to the file's folder, run <code>python3 -m http.server 8080</code>, visit <code>http://localhost:8080/meeting-poll.html</code>.</li>
+    </ol>
+  </div>
+
+</div><!-- end page -->
+
+<script src="https://accounts.google.com/gsi/client" async></script>
+<script>
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+let tokenClient = null;
+let accessToken = null;
+let selectedSlots = [];
+let busyTimes = [];
+let currentWeekStart = getMonday(new Date());
+let currentPollData = null;
+let votes = {};
+let currentVoterVotes = new Set();
+let scriptUrl = '';
+
+// ═══════════════════════════════════════════════
+// SHEETS BACKEND
+// ═══════════════════════════════════════════════
+function getScriptUrl() {
+  return document.getElementById('script-url-input').value.trim();
+}
+
+async function sheetsRequest(payload) {
+  const url = getScriptUrl();
+  if (!url) throw new Error('No Apps Script URL configured.');
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(payload)
+  });
+  if (!resp.ok) throw new Error('HTTP ' + resp.status);
+  const data = await resp.json();
+  if (data.error) throw new Error(data.error);
+  return data;
+}
+
+async function testScriptConnection() {
+  const errEl = document.getElementById('sheets-error');
+  const infoEl = document.getElementById('sheets-info');
+  const dot = document.getElementById('sheets-dot');
+  const lbl = document.getElementById('sheets-label');
+  errEl.textContent = ''; infoEl.textContent = 'Testing…';
+  dot.className = 'sheets-dot';
+  try {
+    const r = await sheetsRequest({ action: 'ping' });
+    dot.className = 'sheets-dot ok';
+    lbl.textContent = 'Connected';
+    infoEl.textContent = '✓ Connection successful — votes will be saved to Google Sheets.';
+    errEl.textContent = '';
+  } catch(e) {
+    dot.className = 'sheets-dot err';
+    lbl.textContent = 'Error';
+    infoEl.textContent = '';
+    errEl.textContent = 'Connection failed: ' + e.message + '. Check the URL and try redeploying the script.';
+  }
+}
+
+async function saveVoteToSheets(pollId, pollTitle, voterName, slotIsos) {
+  return sheetsRequest({
+    action: 'saveVote',
+    pollId,
+    pollTitle,
+    voterName,
+    slots: slotIsos
+  });
+}
+
+async function loadVotesFromSheets(pollId) {
+  return sheetsRequest({ action: 'getVotes', pollId });
+}
+
+// ═══════════════════════════════════════════════
+// GOOGLE AUTH (Calendar)
+// ═══════════════════════════════════════════════
+function signIn() {
+  const cid = document.getElementById('client-id-input').value.trim();
+  if (!cid) { document.getElementById('auth-error').textContent = 'Please paste your OAuth Client ID first.'; return; }
+  document.getElementById('auth-error').textContent = '';
+  if (!tokenClient) {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: cid,
+      scope: 'https://www.googleapis.com/auth/calendar.readonly',
+      callback: (resp) => {
+        if (resp.error) { document.getElementById('auth-error').textContent = 'Auth error: ' + resp.error; return; }
+        accessToken = resp.access_token;
+        setAuthConnected(true);
+        loadCalendar();
+      }
+    });
+  }
+  tokenClient.requestAccessToken({ prompt: 'consent' });
+}
+
+function signOut() {
+  if (accessToken) { google.accounts.oauth2.revoke(accessToken, () => {}); accessToken = null; }
+  tokenClient = null;
+  setAuthConnected(false);
+}
+
+function setAuthConnected(on) {
+  document.getElementById('auth-dot').className = 'auth-dot ' + (on ? 'connected' : 'disconnected');
+  document.getElementById('auth-label').textContent = on ? 'Connected' : 'Not connected';
+  document.getElementById('sign-in-btn').style.display = on ? 'none' : '';
+  document.getElementById('sign-out-btn').style.display = on ? '' : 'none';
+  document.getElementById('cal-section').style.display = on ? '' : 'none';
+}
+
+// ═══════════════════════════════════════════════
+// CALENDAR
+// ═══════════════════════════════════════════════
+function getMonday(d) {
+  const dt = new Date(d), day = dt.getDay();
+  dt.setDate(dt.getDate() - day + (day === 0 ? -6 : 1));
+  dt.setHours(0,0,0,0); return dt;
+}
+function addDays(d, n) { const dt = new Date(d); dt.setDate(dt.getDate()+n); return dt; }
+function prevWeek() { currentWeekStart = addDays(currentWeekStart,-7); loadCalendar(); }
+function nextWeek() { currentWeekStart = addDays(currentWeekStart,7); loadCalendar(); }
+
+async function loadCalendar() {
+  if (!accessToken) return;
+  const btn = document.getElementById('refresh-btn');
+  btn.textContent = 'Loading…'; btn.disabled = true;
+  const start = new Date(currentWeekStart), end = addDays(start,7);
+  try {
+    const resp = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ timeMin: start.toISOString(), timeMax: end.toISOString(), items: [{ id: 'primary' }] })
+    });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error.message);
+    busyTimes = (data.calendars?.primary?.busy||[]).map(b => ({ start: new Date(b.start), end: new Date(b.end) }));
+    renderWeekGrid();
+  } catch(e) { document.getElementById('auth-error').textContent = 'Calendar error: ' + e.message; }
+  btn.textContent = '↻ Refresh'; btn.disabled = false;
+}
+
+function isBusy(dt, dur) {
+  const end = new Date(dt.getTime() + dur*60000);
+  return busyTimes.some(b => dt < b.end && end > b.start);
+}
+function isSelected(dt) { return selectedSlots.some(s => s.iso === dt.toISOString()); }
+
+function renderWeekGrid() {
+  const duration = parseInt(document.getElementById('duration').value)||60;
+  const days = Array.from({length:7},(_,i)=>addDays(currentWeekStart,i));
+  const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const wEnd = addDays(currentWeekStart,6);
+  document.getElementById('week-label').textContent =
+    months[currentWeekStart.getMonth()]+' '+currentWeekStart.getDate()+' – '+months[wEnd.getMonth()]+' '+wEnd.getDate()+', '+wEnd.getFullYear();
+  const slots = [];
+  for (let h=8;h<21;h++) for (let m=0;m<60;m+=30) slots.push({h,m});
+  let html = '<table><thead><tr><th></th>';
+  days.forEach((d,i) => html += `<th>${dayNames[i]}<br><span style="font-size:11px;font-weight:400;">${d.getDate()}</span></th>`);
+  html += '</tr></thead><tbody>';
+  slots.forEach(({h,m}) => {
+    const label = m===0 ? (h>12?h-12+'pm':h+'am') : '';
+    html += `<tr><td class="time-label">${label}</td>`;
+    days.forEach(d => {
+      const dt = new Date(d); dt.setHours(h,m,0,0);
+      const busy = isBusy(dt,duration), sel = isSelected(dt);
+      const cls = ['time-cell',busy?'busy':'',sel?'selected':''].filter(Boolean).join(' ');
+      html += `<td class="${cls}" data-iso="${dt.toISOString()}" data-busy="${busy}" onclick="toggleSlot(this)"></td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('week-grid').innerHTML = html;
+}
+
+function toggleSlot(cell) {
+  if (cell.dataset.busy === 'true') return;
+  const iso = cell.dataset.iso;
+  const duration = parseInt(document.getElementById('duration').value)||60;
+  const idx = selectedSlots.findIndex(s=>s.iso===iso);
+  if (idx>=0) { selectedSlots.splice(idx,1); cell.classList.remove('selected'); }
+  else { selectedSlots.push({iso, label: formatSlotLabel(new Date(iso),duration)}); cell.classList.add('selected'); }
+  renderSlotsList();
+}
+
+function formatSlotLabel(dt, duration) {
+  const days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const end = new Date(dt.getTime()+(duration||60)*60000);
+  const fmt = d => { const h=d.getHours(),m=d.getMinutes(),ap=h>=12?'pm':'am',hh=h>12?h-12:(h===0?12:h); return hh+(m?':'+String(m).padStart(2,'0'):'')+ap; };
+  return `${days[dt.getDay()]}, ${months[dt.getMonth()]} ${dt.getDate()} · ${fmt(dt)} – ${fmt(end)}`;
+}
+
+function addManualSlot() {
+  const dateStr = document.getElementById('manual-date').value.trim();
+  const timeStr = document.getElementById('manual-time').value.trim();
+  const errEl = document.getElementById('slot-error');
+  errEl.textContent = '';
+  if (!dateStr||!timeStr) { errEl.textContent = 'Please fill in both date and time.'; return; }
+  const dt = new Date(dateStr+'T'+timeStr+':00');
+  if (isNaN(dt.getTime())) { errEl.textContent = 'Invalid date or time format.'; return; }
+  const duration = parseInt(document.getElementById('duration').value)||60;
+  const iso = dt.toISOString();
+  if (selectedSlots.find(s=>s.iso===iso)) { errEl.textContent = 'That slot is already added.'; return; }
+  selectedSlots.push({iso, label: formatSlotLabel(dt,duration)});
+  renderSlotsList();
+  if (accessToken) renderWeekGrid();
+  document.getElementById('manual-date').value='';
+  document.getElementById('manual-time').value='';
+}
+
+function removeSlot(iso) {
+  selectedSlots = selectedSlots.filter(s=>s.iso!==iso);
+  renderSlotsList();
+  if (accessToken) renderWeekGrid();
+}
+
+function renderSlotsList() {
+  const el = document.getElementById('slots-list');
+  if (!selectedSlots.length) { el.innerHTML='<p style="font-size:13px;color:var(--ink3);font-style:italic;">No slots yet.</p>'; return; }
+  const sorted = [...selectedSlots].sort((a,b)=>new Date(a.iso)-new Date(b.iso));
+  el.innerHTML = sorted.map(s=>`
+    <div class="slot-item">
+      <div class="slot-label">${s.label}</div>
+      <button class="slot-remove" onclick="removeSlot('${s.iso}')" title="Remove">×</button>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════
+// POLL ID
+// ═══════════════════════════════════════════════
+function makePollId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+}
+
+// ═══════════════════════════════════════════════
+// GENERATE POLL
+// ═══════════════════════════════════════════════
+function generatePoll() {
+  const title = document.getElementById('meeting-title').value.trim();
+  const desc = document.getElementById('meeting-desc').value.trim();
+  const duration = parseInt(document.getElementById('duration').value)||60;
+  const creator = document.getElementById('creator-name').value.trim();
+  const errEl = document.getElementById('slot-error');
+  if (!title) { errEl.textContent='Please add a meeting title.'; errEl.scrollIntoView({behavior:'smooth'}); return; }
+  if (!selectedSlots.length) { errEl.textContent='Please add at least one time slot.'; errEl.scrollIntoView({behavior:'smooth'}); return; }
+  errEl.textContent='';
+  const pollId = makePollId();
+  currentPollData = { pollId, title, desc, duration, creator, slots:[...selectedSlots] };
+  votes = {};
+  selectedSlots.forEach(s=>{ votes[s.iso]=[]; });
+  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(currentPollData))));
+  const scriptSuffix = getScriptUrl() ? '&s='+encodeURIComponent(getScriptUrl()) : '';
+  const url = location.href.split('#')[0]+'#poll='+encoded+scriptSuffix;
+  document.getElementById('poll-link-text').textContent = url;
+  document.getElementById('poll-output').style.display='block';
+  document.getElementById('poll-output').scrollIntoView({behavior:'smooth'});
+}
+
+function copyPollLink() {
+  navigator.clipboard.writeText(document.getElementById('poll-link-text').textContent).then(()=>{
+    const btn = event.target; btn.textContent='Copied!';
+    setTimeout(()=>btn.textContent='Copy link',1500);
+  });
+}
+
+// ═══════════════════════════════════════════════
+// VOTE VIEW
+// ═══════════════════════════════════════════════
+function openVoteView() { if (currentPollData) renderVoteView(currentPollData); }
+
+async function renderVoteView(poll) {
+  document.getElementById('creator-view').style.display='none';
+  document.getElementById('vote-view').style.display='block';
+  document.getElementById('vote-title').textContent = poll.title;
+  document.getElementById('vote-desc').textContent =
+    (poll.desc?poll.desc+'\n':'')+`Duration: ${poll.duration} min`+(poll.creator?` · Created by ${poll.creator}`:'');
+  currentVoterVotes = new Set();
+  votes = {};
+  poll.slots.forEach(s=>{ votes[s.iso]=[]; });
+  renderVoteSlots(poll);
+  await loadAndRenderResults(poll);
+}
+
+function renderVoteSlots(poll) {
+  const el = document.getElementById('vote-slots-list');
+  const sorted = [...poll.slots].sort((a,b)=>new Date(a.iso)-new Date(b.iso));
+  el.innerHTML = sorted.map(s=>`
+    <div class="vote-slot" data-iso="${s.iso}" onclick="toggleVote(this)">
+      <div style="flex:1;">
+        <div class="vote-label">${s.label}</div>
+        <div class="vote-bar-wrap"><div class="vote-bar" id="bar-${s.iso.replace(/[:.]/g,'_')}" style="width:0%"></div></div>
+      </div>
+      <div class="vote-count" id="cnt-${s.iso.replace(/[:.]/g,'_')}">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        0
+      </div>
+    </div>`).join('');
+  updateVoteBars(poll);
+}
+
+function toggleVote(el) {
+  const iso = el.dataset.iso;
+  if (currentVoterVotes.has(iso)) { currentVoterVotes.delete(iso); el.classList.remove('voted'); }
+  else { currentVoterVotes.add(iso); el.classList.add('voted'); }
+}
+
+async function submitVote() {
+  const name = document.getElementById('voter-name').value.trim();
+  const errEl = document.getElementById('vote-error');
+  const infoEl = document.getElementById('vote-info');
+  if (!name) { errEl.textContent='Please enter your name.'; return; }
+  errEl.textContent=''; infoEl.textContent='';
+
+  const btn = document.getElementById('submit-vote-btn');
+  const spinner = document.getElementById('submit-spinner');
+  btn.disabled=true; spinner.style.display='';
+
+  const slotIsos = [...currentVoterVotes];
+
+  // Always update local state
+  slotIsos.forEach(iso=>{
+    if (!votes[iso]) votes[iso]=[];
+    if (!votes[iso].includes(name)) votes[iso].push(name);
+  });
+
+  // Try to persist to Sheets
+  const url = getScriptUrl();
+  if (url) {
+    try {
+      await saveVoteToSheets(currentPollData.pollId, currentPollData.title, name, slotIsos);
+      infoEl.textContent = '✓ Vote saved to Google Sheets.';
+    } catch(e) {
+      infoEl.textContent = 'Vote recorded locally — could not reach Sheets: ' + e.message;
+    }
+  } else {
+    infoEl.textContent = 'Vote recorded (in-memory only — no Sheets URL configured).';
+  }
+
+  btn.disabled=false; spinner.style.display='none';
+  document.getElementById('voter-name').value='';
+  currentVoterVotes = new Set();
+  document.querySelectorAll('.vote-slot').forEach(el=>el.classList.remove('voted'));
+  renderResults(currentPollData);
+  document.getElementById('results-view').style.display='block';
+  document.getElementById('results-view').scrollIntoView({behavior:'smooth'});
+}
+
+async function loadAndRenderResults(poll) {
+  const url = getScriptUrl();
+  if (url) {
+    try {
+      const data = await loadVotesFromSheets(poll.pollId);
+      if (data.votes) {
+        votes = {};
+        poll.slots.forEach(s=>{ votes[s.iso]=[]; });
+        data.votes.forEach(row=>{
+          if (votes[row.slotIso] && !votes[row.slotIso].includes(row.voter)) {
+            votes[row.slotIso].push(row.voter);
+          }
+        });
+      }
+    } catch(e) { /* silently fall back to in-memory */ }
+  }
+  renderResults(poll);
+  document.getElementById('results-view').style.display='block';
+}
+
+async function refreshResults() {
+  const btn = document.getElementById('refresh-results-btn');
+  btn.textContent='Loading…'; btn.disabled=true;
+  await loadAndRenderResults(currentPollData);
+  btn.textContent='↻ Refresh results'; btn.disabled=false;
+}
+
+function updateVoteBars(poll) {
+  const maxVotes = Math.max(1,...poll.slots.map(s=>(votes[s.iso]||[]).length));
+  poll.slots.forEach(s=>{
+    const count=(votes[s.iso]||[]).length;
+    const key=s.iso.replace(/[:.]/g,'_');
+    const bar=document.getElementById('bar-'+key);
+    const cnt=document.getElementById('cnt-'+key);
+    if (bar) bar.style.width=Math.round(count/maxVotes*100)+'%';
+    if (cnt) cnt.lastChild.textContent=' '+count;
+  });
+}
+
+function renderResults(poll) {
+  updateVoteBars(poll);
+  const sorted=[...poll.slots].sort((a,b)=>(votes[b.iso]||[]).length-(votes[a.iso]||[]).length);
+  const winner=sorted[0], winnerCount=(votes[winner.iso]||[]).length;
+  const winnerEl=document.getElementById('winner-section');
+  winnerEl.innerHTML = winnerCount===0
+    ? '<p style="font-size:13px;color:var(--ink3);font-style:italic;">No votes yet. Share the link!</p>'
+    : `<div class="winner-card"><div class="winner-icon">🏆</div><div><div class="winner-label">${winner.label}</div><div class="winner-sub">${winnerCount} vote${winnerCount!==1?'s':''} — leading option</div></div></div>`;
+  document.getElementById('results-list').innerHTML = sorted.map(s=>{
+    const count=(votes[s.iso]||[]).length, voters=(votes[s.iso]||[]).join(', ');
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--cream3);">
+      <div>
+        <div style="font-size:14px;font-weight:500;">${s.label}</div>
+        ${voters?`<div style="font-size:12px;color:var(--ink3);margin-top:2px;">${voters}</div>`:''}
+      </div>
+      <div style="font-size:15px;font-weight:500;color:${count===winnerCount&&count>0?'var(--sage)':'var(--ink3)'};">${count}</div>
+    </div>`;
+  }).join('');
+}
+
+function exportResults() {
+  if (!currentPollData) return;
+  const sorted=[...currentPollData.slots].sort((a,b)=>(votes[b.iso]||[]).length-(votes[a.iso]||[]).length);
+  let out=`Meeting Poll: ${currentPollData.title}\nDuration: ${currentPollData.duration} min\n\nResults:\n`;
+  sorted.forEach(s=>{
+    const count=(votes[s.iso]||[]).length, voters=(votes[s.iso]||[]).join(', ');
+    out+=`  ${s.label} — ${count} vote${count!==1?'s':''} (${voters||'none'})\n`;
+  });
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([out],{type:'text/plain'}));
+  a.download='poll-results.txt'; a.click();
+}
+
+function backToCreator() {
+  document.getElementById('vote-view').style.display='none';
+  document.getElementById('creator-view').style.display='';
+}
+
+// ═══════════════════════════════════════════════
+// URL HASH — load poll on page load
+// ═══════════════════════════════════════════════
+function checkHash() {
+  const hash = location.hash;
+  if (!hash.startsWith('#poll=')) return;
+  try {
+    // Extract poll data (everything between #poll= and &s= if present)
+    let pollPart = hash.slice(6);
+    let scriptPart = '';
+    const sIdx = pollPart.indexOf('&s=');
+    if (sIdx>=0) { scriptPart=decodeURIComponent(pollPart.slice(sIdx+3)); pollPart=pollPart.slice(0,sIdx); }
+    const poll = JSON.parse(decodeURIComponent(escape(atob(pollPart))));
+    currentPollData = poll;
+    votes = {};
+    poll.slots.forEach(s=>{ votes[s.iso]=[]; });
+    if (scriptPart) document.getElementById('script-url-input').value = scriptPart;
+    renderVoteView(poll);
+  } catch(e) { console.warn('Could not parse poll from URL:', e); }
+}
+
+window.addEventListener('load', checkHash);
+</script>
+</body>
+</html>
